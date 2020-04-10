@@ -5,34 +5,34 @@ from django.db import models
 # Create your models here.
 
 class CompetitionDataBase(models.Model):
-    competition_uuid = 
+    uuid = 
+
     date = 
     rang = 
-    sportsmen_age
-    sportsmen_class
 
     start_registration =
     end_registration =  
     online_registration = 
 
-    program = 
     organizer =
     location = 
     
-class Dancers(models.Model):
-    pass
+class Programs(models.Model):
+    uuid
+    program =
+    age_groups = 
+    class_groups = 
 
 class Referees(models.Model):
-    pass
+    uuid 
 
-class Programs(models.Model):
-    pass
+class Dansers(models.Model):
+    uuid
 
 class Stages(models.Model):
-    pass
+    uuid
+    stage_name
 
-class DancersAndPrograms(models.Model):
-    pass
 
-class DansersAndStages(model.Model):
+class Results(models.model):
     pass

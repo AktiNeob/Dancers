@@ -1,0 +1,2 @@
+URL = 127.0.0.1:8000/auth/lists/
+URL = 127.0.0.1:8000/auth/list/<uuid>
