@@ -123,19 +123,26 @@ STATIC_URL = '/static/'
 
 import datetime
 
+# Настройки времени жизни токенов межсевисной авторизации
 SERVICE_ACCESS_TOKEN_TTL = datetime.timedelta(minutes=2)
 SERVICE_REFRESH_TOKEN_TTL = datetime.timedelta(minutes=2)
 SERVICE_TOKEN_SIZE = 32
 
+# Настройки времени жизни токенов пользователей
 USER_ACCESS_TOKEN_TTL = datetime.timedelta(minutes=2)
 USER_REFRESH_TOKEN_TTL = datetime.timedelta(minutes=2)
 USER_TOKEN_SIZE = 32
 
+# Настройка AppID и AppSecret сервисов, для межсервисной авторизации
 APP_CREDITALES = {
     "123": "123", 
     "456": "456"
 }
 
+# Доступные роли пользователей на севрисе
+AVAILABLE_ROLES = ["admin", "sportsman", 'referee', 'trainer', 'organizer', 'federation_officer', 'supervisor']
+
+# Настройка логирования
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,

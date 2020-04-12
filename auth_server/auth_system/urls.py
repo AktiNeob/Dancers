@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ApiWhiteList, ApiWhiteListEntry, ServiseAuth, UsersAuthorization, UserSessions, UserRegistration 
+from .views import ApiWhiteList, ApiWhiteListEntry, ServiseAuth, UsersAuthorization, UserSessions, UserRegistration, AccountManagement 
 
 urlpatterns = [
     path('lists/', ApiWhiteList.as_view()),
@@ -7,8 +7,7 @@ urlpatterns = [
 
     path('services/', ServiseAuth.as_view()),
     
-    # path('users/', Users.as_view()),
-    # path('user/', User.as_view()),
+    path('accounts/', AccountManagement.as_view()),
 
     path('registration/', UserRegistration.as_view()),
 

@@ -19,6 +19,8 @@ from django.conf import settings
 import os
 os.system("clear")
 
+import hashlib
+
 import logging
 auth_logger = logging.getLogger('auth_log')
 
@@ -97,10 +99,16 @@ class BaseMethods(APIView):
                 break
         return {"message": "No Access"}
 
-    #TODO Сделать метод по хэшированию паролей
-    def password_hasher():
+ 
+  
         pass
 
+    def hash_password(self, password):
+
+        h = hashlib.md5(password.encode())
+        result = h.hexdigest()
+        return result
+    
     @staticmethod
     def authorization(roles):
         def user_auth_decorator(func):
@@ -130,6 +138,8 @@ class BaseMethods(APIView):
 # Классы для работы с WhiteList сервисов
 class ApiWhiteListBase(BaseMethods):
 
+    apps = settings.APP_CREDITALES
+
     # Функция логирования класса WhiteList. Основные настройки логгера лежат в settings.py
     def logger(self, request, response, uuid=0, erros = []):
 
@@ -157,6 +167,10 @@ class ApiWhiteListBase(BaseMethods):
         
         app_id_1 = data["app_id_1"]
         app_id_2 = data["app_id_2"]
+
+        if (not app_id_1 in self.apps) or (not app_id_2 in self.apps):
+            return {"message": "Незарегистрированные сервисы"}
+
         try:
             entry = ss.objects.get(app_id_1 = app_id_1, app_id_2 = app_id_2)
             return {"message": "ОШИБКА: Запись уже существует"}
@@ -224,29 +238,40 @@ class BaseServiceAuthMethods(BaseMethods):
         auth_logger.info( 
                     f'\nМежсервисная Авторизация\n{request.method} - {request.build_absolute_uri()}\n\nQuery Params\n{request.GET}\n\nHeaders\n{request.headers}\n\nData:\n{request.data}\n\nResponse: {response}')
            
-    def white_list_verification(self, request_data):
-        try:
-            white_list_entry = ss.objects.get(app_id_1 = request_data['app_id_1'], app_id_2 = request_data['app_id_2'])
-            return {"message": "Success", "entry": white_list_entry}
-        
-        except:
-            return {"message": "No Access"}
+    def white_list_verification(self, request_data, status):
 
+        if status == "First Auth":
+            try:
+                white_list_entry = ss.objects.get(app_id_1 = request_data['app_id_1'], app_id_2 = request_data['app_id_2'])
+                return {"message": "Success", "entry": white_list_entry}
+            except:
+                return {"message": "No Access"}
+
+        elif status == "Token Update":
+            try:
+                white_list_entry = ss.objects.get(refresh_token = request_data['refresh_token'])
+                return {"message": "Success", "entry": white_list_entry}
+            except:
+                return {"message": "No Access"}
+
+        elif status == "Auth":
+            try:
+                white_list_entry = ss.objects.get(access_token = request_data['access_token'])
+                return {"message": "Success", "entry": white_list_entry}
+            except:
+                return {"message": "No Access"}
+        
     def data_analizator(self, request_data):
         
-        if 'app_id_1' in request_data and 'app_id_2' in request_data:
+        if ('app_id_1' in request_data) and ('app_id_2' in request_data) and ('app_secret' in request_data) :
+            return "First Auth"
 
-            if "access_token" in request_data:
-                return "Auth"
+        elif "access_token" in request_data:
+            return "Auth"
 
-            elif "refresh_token" in request_data:
-                    return "Token Update"
+        elif "refresh_token" in request_data:
+            return "Token Update"
 
-            elif 'app_secret' in request_data:
-                return "First Auth"
-
-            else:
-                return "BAD Request"
         else:
             return "BAD Request"
 
@@ -254,7 +279,7 @@ class BaseServiceAuthMethods(BaseMethods):
 
         valid_secret = self.app_creds[request_data['app_id_1']]
         if valid_secret != request_data['app_secret']:
-            return {"message": "Invalid AppID"}
+            return {"message": "No Access"}
         else:
             return {"message": "Success"}
         
@@ -265,22 +290,22 @@ class BaseServiceAuthMethods(BaseMethods):
 
         request_data = self.get_request_data(request)
         status = self.data_analizator(request_data)
+        print(status)
 
         if status == "BAD Request":
-            return {"data": 'Bad Request', "status": 400}
+            return {"message": 'Bad Request', "status": 400}
         
-        white_list_entry = self.white_list_verification(request_data)
+        white_list_entry = self.white_list_verification(request_data, status)
         if white_list_entry["message"] == "No Access":
-            return {"data": "No Access", "status": 400}
+            return {"message": "No Access", "status": 400}
         
         if status == "First Auth":
-            print("First Auth")
             appid_status = self.appid_verification(request_data)
             if appid_status["message"] == "Success":
                 tokens = self.create_tokens(self.access_token_ttl, self.refresh_token_ttl, 32, white_list_entry["entry"])
                 return {'data': tokens, "status": 200}
             else:
-                return {"data": appid_status["message"], "status": 400}
+                return {"message": appid_status["message"], "status": 400}
 
 
         if status == "Token Update":
@@ -290,15 +315,15 @@ class BaseServiceAuthMethods(BaseMethods):
                 return {'data': tokens, "status": 200}
             else:
                 print(token_status["message"])
-                return {"data": token_status["message"], "status": 400}
+                return {"message": token_status["message"], "status": 400}
 
 
         if status == "Auth":
             access_token_status = self.token_verification(request_data, ss, "access_token", self.refresh_token_ttl)
             if access_token_status["message"] == 'Success':
-                return {"data": access_token_status["message"], "status": 200}
+                return {"message": access_token_status["message"], "status": 200}
             else:
-                return {"data": access_token_status["message"], "status": 400}
+                return {"message": access_token_status["message"], "status": 400}
 
 class ServiseAuth(BaseServiceAuthMethods):
     
@@ -307,7 +332,10 @@ class ServiseAuth(BaseServiceAuthMethods):
         print(response_data)
         status = response_data["status"]
         self.logger(request, f'{status}')
-        return JsonResponse({"data": response_data["data"]}, status=response_data["status"])
+        if "data" in response_data:
+            return JsonResponse(response_data["data"], status=response_data["status"])
+        else:
+            return JsonResponse({"message": response_data["message"]}, status=response_data["status"])
 
 
 # Классы для работы с Авторизацией пользователей 
@@ -348,7 +376,7 @@ class UsersAuthorization(BaseUsersAuthorization):
 
         authorization_status = self.user_authorization_controller(request)
         self.logger(request, f'{authorization_status}')
-        return JsonResponse(authorization_status["data"], status=authorization_status["status"])
+        return JsonResponse({"message": authorization_status["data"]}, status=authorization_status["status"])
 
 
 # Классы для работы с Сессиями и Аутентификацией пользователей
@@ -378,12 +406,14 @@ class BaseUserSession(BaseMethods):
         login = request_data['login']
         password = request_data['password']
 
+        h_password = self.hash_password(password)
+
         try:
             user = ud.objects.get(login=login)
         except:
             return {"message": "Неверный логин или пароль", 'entry': None}
         
-        if user.password == password:
+        if user.password == h_password:
             return {"message": "Success", 'entry': user}
         else:
             return {"message": "Неверный логин или пароль", 'entry': None}
@@ -422,7 +452,6 @@ class BaseUserSession(BaseMethods):
                 session = token_status['entry']
                 tokens = self.create_tokens(self.access_token_ttl, self.refresh_token_ttl, self.token_size, session)
                 return {
-                    "message": "Сессия обновлена", 
                     "access_token": tokens['access_token'], 
                     "refresh_token": tokens['refresh_token'],
                     "access_token_valid_until": tokens['access_token_valid_until'], 
@@ -500,7 +529,8 @@ class BaseUserRegistration(BaseUserSession):
                     return {"data": self.error_messages, "status": 400}
     
             data = data_status['data']
-            new_user = ud(login = data['login'], password = data['password'], role='Sportsman')
+            data['password'] = self.hash_password(data['password'])
+            new_user = ud(login = data['login'], password = data['password'], role='sportsman')
             new_user.save()
             new_user = ud.objects.get(login = data['login'])
             session = self.create_new_session(new_user)
@@ -519,8 +549,7 @@ class UserRegistration(BaseUserRegistration):
 # Классы для управления аккаунтами пользователей
 class BaseAccountManagement(BaseMethods):
     
-    #TODO Валидация ролей 
-    # available_roles = settings.AVAILABLE_ROLES
+    available_roles = settings.AVAILABLE_ROLES
  
     def logger(self, rquest, response):
         pass
@@ -539,35 +568,54 @@ class BaseAccountManagement(BaseMethods):
             return {"status": "Bad Request"}
 
     def validator(self, data):
-        pass
+        if data['role'] in self.available_roles:
+            return True
+        else:
+            return False
      
-    # @BaseMethods.authorization('SuperVisor')     
+    # @BaseMethods.authorization('SuperVisor', 'admin')     
     def give_role(self, data):
+        
+        role_is_valid = self.validator(data)
+        if not role_is_valid:
+            return {"data": "роль введена не корректно", "status": 400}
+
         user = ud.objects.get(login=data['login'])
+
+        roles = user.role
+        roles = roles.split(",")
+        if data['role'] in roles:
+            return {"data": "Пользователь уже обладает указанной ролью", "status": 400}
+
         user.role += (',' + data['role'])
         user.save()
         role = data['role']
         login = data['login']
         return{'data': f'Роль {role} успешно добалена пользователю {login}', "status": 200}
 
-    # @BaseMethods.authorization('SuperVisor') 
+    # @BaseMethods.authorization('SuperVisor', 'admin') 
     def take_away_role(self, data):
+        role_is_valid = self.validator(data)
+        if not role_is_valid:
+            return {"data": "Данный пользователь не обладает указанной ролью", "status": 400}
+
         user = ud.objects.get(login=data['login'])
         roles = user.role.split(',')
         for i in range(0, len(roles)):
             if roles[i] == data['role']:
-                rolls.pop(i)
-                break
-        user.role = ",".join(roles)
-        user.save()
-        role = data['role']
-        login = data['login']
-        return {'data': f'Роль {role} успешно удалена у пользователя {login}', "status": 204}
+                roles.pop(i)
+                user.role = ",".join(roles)
+                user.save()
+                role = data['role']
+                login = data['login']
+                return {'data': f'Роль {role} успешно удалена у пользователя {login}', "status": 204}
+        return {"data": "Данный пользователь не обладает указанной ролью", "status": 400}
 
     def account_manager(self, request):
         request_data = self.get_request_data(request)
         data = self.data_analizer(request_data)
         if data["status"] == "Success":
+            data = data["data"]
             if data['method'] == 'give_role':
                 result = self.give_role(data)
                 return result
@@ -577,10 +625,10 @@ class BaseAccountManagement(BaseMethods):
             else:
                 return {"data": "Недопустимый метод", 'status': 400}
         else:
-            return {"data": data["data"], 'status': 400}
+            return {"data": data["status"], 'status': 400}
 
 class AccountManagement(BaseAccountManagement):
     def post(self, request):
-        response = self.registration(request)
+        response = self.account_manager(request)
         return JsonResponse({"message": response["data"]}, status=response["status"])
     

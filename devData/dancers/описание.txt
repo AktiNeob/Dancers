@@ -1,0 +1,9 @@
+URL = 127.0.0.1:8000/api/dancers
+
+Доступные методы: GET POST
+
+
+
+URL = 127.0.0.1:8000/api/dancer/<uuid:uuid>
+
+Доступные методы: GET PATCH DELETE

@@ -109,17 +109,3 @@ class DancerView(BaseView):
         self.dancerLogger(request = request, response = "HTTP_204_NO_CONTENT", uuid = uuid)
         return Response(status = status.HTTP_204_NO_CONTENT)
     
-def print_page(request):
-    
-    return render(request,'dancers_database/index.html')
-    
-def print_data(request):
-    print(request.method)
-    print(request.POST)
-    print(status)
-    print(status.HTTP_200_OK)
-    print(123)
-
-    r = JsonResponse({"111": "222"})
-    print(r)
-    return r
