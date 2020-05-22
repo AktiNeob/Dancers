@@ -11,6 +11,7 @@ class ServiceSessions(models.Model):
     refresh_token = models.CharField(max_length=100, null=True)
     token_born = models.CharField(max_length=100, null=True)
 
+
 class UsersSessions(models.Model):
     session_uuid = models.UUIDField(primary_key = True, default = uuid4)
     user_uuid = models.UUIDField()

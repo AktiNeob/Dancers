@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import DancersView, print_page,print_data, DancerView
+from .views import DancersView, DancerView
 
 
 urlpatterns = [

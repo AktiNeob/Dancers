@@ -38,14 +38,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'auth_system'
+    'auth_system',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -138,6 +140,14 @@ APP_CREDITALES = {
     "123": "123", 
     "456": "456"
 }
+
+
+CORS_ORIGIN_WHIITELIST = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000"
+]
+
+
 
 # Доступные роли пользователей на севрисе
 AVAILABLE_ROLES = ["admin", "sportsman", 'referee', 'trainer', 'organizer', 'federation_officer', 'supervisor']
